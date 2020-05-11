@@ -220,6 +220,9 @@ import UIKit
 
     /// The brief description displayed in accessibility mode for maximum value handler. If not set, the default is empty String.
     @IBInspectable open var maxLabelAccessibilityHint: String?
+    
+    @IBInspectable open var formatNumber: String?
+    @IBInspectable open var labelBackground: UIColor?
 
 
     // MARK: - private stored properties
@@ -238,6 +241,9 @@ import UIKit
 
     private var minLabelTextSize: CGSize = .zero
     private var maxLabelTextSize: CGSize = .zero
+    
+    private var minShape: CAShapeLayer = CAShapeLayer()
+    private var maxShape: CAShapeLayer = CAShapeLayer()
 
     // UIFeedbackGenerator
     private var previousStepMinValue: CGFloat?
@@ -412,7 +418,18 @@ import UIKit
 
         // draw the text labels
         let labelFontSize: CGFloat = 12.0
-        let labelFrame: CGRect = CGRect(x: 0.0, y: 50.0, width: 75.0, height: 14.0)
+        let labelFrame: CGRect = CGRect(x: 0.0, y: 0.0, width: 35.0, height: 14.0)
+        
+        let shapeFrame = CGRect(x: labelFrame.origin.x, y: labelFrame.origin.y - 7, width: labelFrame.width, height: 32)
+        minShape = createShape(size: shapeFrame.size)
+        maxShape = createShape(size: shapeFrame.size)
+
+        minShape.frame = shapeFrame
+        maxShape.frame = shapeFrame
+        layer.addSublayer(minShape)
+        layer.addSublayer(maxShape)
+        
+        print("Created Shape ===")
 
         minLabelFont = UIFont.systemFont(ofSize: labelFontSize)
         minLabel.alignmentMode = CATextLayerAlignmentMode.center
@@ -429,6 +446,39 @@ import UIKit
         setupStyle()
 
         refresh()
+    }
+    
+    private func createShape(size: CGSize) -> CAShapeLayer {
+        let shape = CAShapeLayer()
+        shape.lineWidth = 0
+        shape.fillColor = labelBackground?.cgColor ?? UIColor.red.cgColor
+        
+        var newSize = size
+        newSize.width = 35
+        
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: newSize.width, y: 0))
+        path.addLine(to: CGPoint(x: newSize.width, y: size.height))
+        path.addLine(to: CGPoint(x: (newSize.width / 2) + 9, y: size.height))
+        path.addLine(to: CGPoint(x: newSize.width / 2 + 6, y: size.height + 3))
+        path.addLine(to: CGPoint(x: (newSize.width / 2) + 3, y: size.height))
+        path.addLine(to: CGPoint(x: 0, y: size.height))
+        path.close()
+        shape.path = path.cgPath
+        
+        return shape
+    }
+    
+    private func updateShapeFrame(min: CGRect, max: CGRect) {
+        let minShapeFrame = CGRect(x: min.origin.x - 10, y: min.origin.y - 7, width: min.width + 12 , height: 32)
+        let maxShapeFrame = CGRect(x: max.origin.x - 7, y: max.origin.y - 7, width: max.width + 15, height: 32)
+        
+        minShape.frame = minShapeFrame
+        maxShape.frame = maxShapeFrame
+        
+        minLabel.frame = CGRect(origin: CGPoint(x: min.origin.x - 5, y: min.origin.y), size: CGSize(width: min.width, height: 28))
+        maxLabel.frame = CGRect(origin: CGPoint(x: max.origin.x, y: max.origin.y), size: CGSize(width: max.width, height: 28))
     }
 
     private func percentageAlongLine(for value: CGFloat) -> CGFloat {
@@ -475,17 +525,19 @@ import UIKit
     private func updateLabelValues() {
         minLabel.isHidden = hideLabels || disableRange
         maxLabel.isHidden = hideLabels
+        
+        let formattedNumber = formatNumber ?? "%@"
 
         if let replacedString = delegate?.rangeSeekSlider(self, stringForMinValue: selectedMinValue) {
-            minLabel.string = replacedString
+            minLabel.string = String(format: formattedNumber, replacedString)
         } else {
-            minLabel.string = numberFormatter.string(from: selectedMinValue as NSNumber)
+            minLabel.string = String(format: formattedNumber, numberFormatter.string(from: selectedMinValue as NSNumber) ?? "")
         }
 
         if let replacedString = delegate?.rangeSeekSlider(self, stringForMaxValue: selectedMaxValue) {
-            maxLabel.string = replacedString
+            maxLabel.string = String(format: formattedNumber, replacedString)
         } else {
-            maxLabel.string = numberFormatter.string(from: selectedMaxValue as NSNumber)
+            maxLabel.string = String(format: formattedNumber, numberFormatter.string(from: selectedMaxValue as NSNumber) ?? "") //numberFormatter.string(from: selectedMaxValue as NSNumber)
         }
 
         if let nsstring = minLabel.string as? NSString {
@@ -495,6 +547,7 @@ import UIKit
         if let nsstring = maxLabel.string as? NSString {
             maxLabelTextSize = nsstring.size(withAttributes: [.font: maxLabelFont])
         }
+        
     }
 
     private func updateColors() {
@@ -528,6 +581,11 @@ import UIKit
             rightHandle.backgroundColor = color
             rightHandle.borderColor = handleBorderColor.map { $0.cgColor }
         }
+        
+        minShape.fillColor = labelBackground?.cgColor ?? UIColor.red.cgColor
+        maxShape.fillColor = labelBackground?.cgColor ?? UIColor.red.cgColor
+        minShape.backgroundColor = labelBackground?.cgColor ?? UIColor.red.cgColor
+        maxShape.backgroundColor = labelBackground?.cgColor ?? UIColor.red.cgColor
     }
 
     private func updateAccessibilityElements() {
@@ -562,10 +620,10 @@ import UIKit
         let minSpacingBetweenLabels: CGFloat = 8.0
 
         let newMinLabelCenter: CGPoint = CGPoint(x: leftHandle.frame.midX,
-                                                 y: leftHandle.frame.maxY + (minLabelTextSize.height/2) + labelPadding)
+                                                 y: 0)//leftHandle.frame.maxY + (minLabelTextSize.height/2) + labelPadding)
 
         let newMaxLabelCenter: CGPoint = CGPoint(x: rightHandle.frame.midX,
-                                                 y: rightHandle.frame.maxY + (maxLabelTextSize.height/2) + labelPadding)
+                                                 y: 0)//rightHandle.frame.maxY + (maxLabelTextSize.height/2) + labelPadding)
         
         let newLeftMostXInMaxLabel: CGFloat = newMaxLabelCenter.x - maxLabelTextSize.width / 2.0
         let newRightMostXInMinLabel: CGFloat = newMinLabelCenter.x + minLabelTextSize.width / 2.0
@@ -603,6 +661,8 @@ import UIKit
                 minLabel.frame.origin.x = maxLabel.frame.origin.x - minSpacingBetweenLabels - minLabel.frame.width
             }
         }
+        
+        updateShapeFrame(min: minLabel.frame, max: maxLabel.frame)
     }
 
     private func updateFixedLabelPositions() {
@@ -617,6 +677,8 @@ import UIKit
         if maxLabel.frame.maxX > frame.width {
             maxLabel.frame.origin.x = frame.width - maxLabel.frame.width
         }
+        
+        updateShapeFrame(min: minLabel.frame, max: maxLabel.frame)
     }
 
     fileprivate func refresh() {
