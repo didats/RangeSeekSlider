@@ -452,22 +452,28 @@ import UIKit
         let shape = CAShapeLayer()
         shape.lineWidth = 0
         shape.fillColor = labelBackground?.cgColor ?? UIColor.red.cgColor
+        shape.path = createPath(frame: CGRect(origin: CGPoint.zero, size: size))
         
-        var newSize = size
-        newSize.width = 35
+        return shape
+    }
+    
+    private func createPath(frame: CGRect, isMin: Bool = true) -> CGPath {
+        var addition: CGFloat = 5
+        if !isMin {
+            addition = 3
+        }
         
         let path = UIBezierPath()
         path.move(to: CGPoint(x: 0, y: 0))
-        path.addLine(to: CGPoint(x: newSize.width, y: 0))
-        path.addLine(to: CGPoint(x: newSize.width, y: size.height))
-        path.addLine(to: CGPoint(x: (newSize.width / 2) + 9, y: size.height))
-        path.addLine(to: CGPoint(x: newSize.width / 2 + 6, y: size.height + 3))
-        path.addLine(to: CGPoint(x: (newSize.width / 2) + 3, y: size.height))
-        path.addLine(to: CGPoint(x: 0, y: size.height))
+        path.addLine(to: CGPoint(x: frame.width, y: 0))
+        path.addLine(to: CGPoint(x: frame.width, y: frame.height))
+        path.addLine(to: CGPoint(x: (frame.width / 2) + addition, y: frame.height))
+        path.addLine(to: CGPoint(x: (frame.width / 2) + addition - 3, y: frame.height + 3))
+        path.addLine(to: CGPoint(x: (frame.width / 2) + addition - 6, y: frame.height))
+        path.addLine(to: CGPoint(x: 0, y: frame.height))
         path.close()
-        shape.path = path.cgPath
         
-        return shape
+        return path.cgPath
     }
     
     private func updateShapeFrame(min: CGRect, max: CGRect) {
@@ -479,6 +485,9 @@ import UIKit
         
         minLabel.frame = CGRect(origin: CGPoint(x: min.origin.x - 5, y: min.origin.y), size: CGSize(width: min.width, height: 28))
         maxLabel.frame = CGRect(origin: CGPoint(x: max.origin.x, y: max.origin.y), size: CGSize(width: max.width, height: 28))
+        
+        minShape.path = createPath(frame: minShape.frame)
+        maxShape.path = createPath(frame: maxShape.frame, isMin: false)
     }
 
     private func percentageAlongLine(for value: CGFloat) -> CGFloat {
